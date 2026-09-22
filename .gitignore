@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+.venv/
+.uv-cache/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.log
+data/
+.codex

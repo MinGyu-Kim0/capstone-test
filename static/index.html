@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6f3">
+  <title>Voice Notes · 강의 노트</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/subjects.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Voice Notes 홈"><span class="brand-mark" aria-hidden="true">vn.</span> Voice Notes</a>
+    <span class="workspace-label">한국어 + 영어 · 강의 노트 <span class="version">MVP</span></span>
+  </header>
+  <div class="app-shell">
+  <aside class="notes-sidebar" aria-labelledby="library-title">
+    <div class="library-heading"><h2 id="library-title">과목 · 노트</h2><span id="note-count" class="badge">0</span></div>
+    <button id="new-note" class="button secondary" type="button">＋ 새 노트</button>
+    <form id="subject-create-form" class="subject-create"><label class="sr-only" for="subject-name">새 과목명</label><input id="subject-name" maxlength="80" placeholder="새 과목명" required><button id="subject-create" class="button secondary" type="submit">＋ 과목 폴더</button></form>
+    <p class="library-hint">전사 원문 · 실시간 요약 · 최종 노트</p>
+    <nav id="saved-notes" aria-label="저장된 노트 목록"></nav>
+    <p id="library-empty" class="library-empty">녹음을 시작하면 여기에<br>노트가 자동으로 저장됩니다.</p>
+    <p id="library-status" class="library-status" role="status">저장된 노트를 불러옵니다.</p>
+  </aside>
+  <main>
+    <div class="heading">
+      <div><p class="eyebrow">LISTEN. UNDERSTAND. LEARN.</p><h1 id="note-title">강의 노트</h1><p id="note-meta" class="intro">한국어 설명과 영어 전문 용어를 함께 기록하고 정리하세요.</p></div>
+      <div class="heading-actions"><label id="note-folder-label" hidden>저장 과목<select id="note-folder"></select></label><button id="download" class="button secondary" disabled>↓ 기록 다운로드</button><button id="note-delete" class="button danger" hidden>강의 노트 삭제</button></div>
+    </div>
+
+    <div id="notice" class="notice" role="alert" hidden></div>
+
+    <section id="subject-view" class="panel" hidden aria-labelledby="subject-view-title">
+      <div class="panel-heading"><h2 id="subject-view-title">과목 종합 노트</h2><label class="model-picker"><span class="sr-only">과목 종합 요약 모델</span><select id="subject-model"></select></label></div>
+      <div class="subject-toolbar"><button id="subject-generate" class="button primary">종합 노트 생성</button><button id="subject-new-note" class="button secondary">이 과목에 새 강의</button><button id="subject-summary-delete" class="text-button" hidden>종합 노트 삭제</button><button id="subject-delete" class="text-button" hidden>빈 과목 폴더 삭제</button></div>
+      <p id="subject-status" class="subject-status" role="status"></p>
+      <div id="subject-summary" class="subject-summary placeholder">완료된 강의 최종 노트를 모아 과목 전체를 정리합니다.</div>
+      <div class="subject-lectures"><h3>이 과목의 강의 노트</h3><p>강의별 원문·실시간 요약·최종 노트는 각각 보관됩니다.</p><div id="subject-lectures"></div></div>
+    </section>
+
+    <div id="lecture-workspace">
+
+    <section class="panel course-panel" aria-labelledby="course-title">
+      <div class="panel-heading"><h2 id="course-title">과목별 전사 설정</h2><span class="badge">한국어 + 영어</span></div>
+      <fieldset id="course-settings">
+        <legend class="sr-only">녹음 시작 전에 과목과 인식할 용어를 설정하세요</legend>
+        <div class="course-row">
+          <label>저장된 과목<select id="course-select"><option value="">새 과목 / 기본 설정</option></select></label>
+          <label>과목명<input id="course-name" maxlength="80" placeholder="예: 일반물리학" autocomplete="off"></label>
+        </div>
+        <div class="course-row">
+          <label>강의 배경 · 설명 (context)<textarea id="course-context" maxlength="2000" rows="4" placeholder="예: 뉴턴 역학 수업입니다. 힘, 운동량, 에너지 보존을 다루며 한국어 설명에 영어 전문 용어가 섞입니다."></textarea><span class="field-hint">강의 주제와 분야를 적어 주세요. 최대 2,000자.</span></label>
+          <label>인식할 용어 (terms)<textarea id="course-terms" maxlength="8099" rows="4" placeholder="momentum&#10;각운동량&#10;Hamiltonian"></textarea><span class="field-hint">한 줄에 한 용어. 최대 100개, 각 80자. 중복은 한 번만 전송합니다.</span></label>
+        </div>
+        <div class="course-actions"><button id="course-save" class="button secondary" type="button">전사 설정 저장</button><button id="course-delete" class="text-button" type="button" disabled>전사 설정 삭제</button><span id="course-status" role="status">전사 설정은 이 브라우저에 저장됩니다. 녹음은 입력한 과목명의 폴더에 쌓입니다.</span></div>
+      </fieldset>
+    </section>
+
+    <section class="recorder" aria-label="녹음 제어">
+      <div class="recorder-info">
+        <div class="mic-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 10v1a6 6 0 0 0 12 0v-1M12 17v4M8 21h8"/></svg></div>
+        <div><div id="status" class="status" role="status">설정 확인 중</div><p id="status-detail">마이크와 API 연결을 준비합니다.</p></div>
+      </div>
+      <div class="record-actions"><time id="timer">00:00</time><button id="start" class="button primary" disabled><span aria-hidden="true">●</span> 녹음 시작</button><button id="stop" class="button stop" disabled>■ 종료 및 요약</button></div>
+    </section>
+
+    <p class="model-hint">각 노트 오른쪽에서 요약 모델을 선택하세요. 녹음 중에는 변경할 수 없으며, 저장된 최종 노트는 모델을 바꿔 다시 작성할 수 있습니다.</p>
+    <div class="notes-grid">
+      <div class="source-column">
+        <section class="panel transcript-panel" aria-labelledby="transcript-title">
+          <div class="panel-heading"><div><span class="section-number">01</span><h2 id="transcript-title">한국어·영어 원문</h2></div><span class="badge">Soniox · KO + EN</span></div>
+          <div id="transcript-scroll" class="transcript-scroll">
+            <div id="transcript-empty" class="empty-state"><span class="empty-symbol" aria-hidden="true">“</span><h3>강의 내용을 여기에 기록합니다</h3><p>한국어와 영어가 섞인 강의를 그대로 전사합니다.<br>확정 전사는 진하게, 인식 중인 내용은 연하게 표시됩니다.</p></div>
+            <div class="transcript-text"><span id="confirmed"></span><span id="partial" class="partial"></span></div>
+          </div>
+          <div class="panel-footer"><span id="char-count">0자 기록됨</span><span>한국어 · 영어 용어 인식</span></div>
+        </section>
+      </div>
+
+      <div class="summary-column">
+        <section class="panel" aria-labelledby="live-title">
+          <div class="panel-heading"><div><span class="section-number">02</span><h2 id="live-title">실시간 요약 노트</h2></div><label class="model-picker"><span class="sr-only">실시간 요약 모델</span><select id="live-model" disabled></select></label></div>
+          <div id="live-summary" class="summary-text placeholder">들어오는 발화 청크마다 핵심 주제와 요약을 표시합니다.
+새 내용·반복된 내용·보완·정정을 구분하고, 해당 전사 원문도 확인할 수 있습니다.</div>
+          <div class="panel-footer"><div><span id="live-status" role="status">강의 시작을 기다리는 중</span><span id="live-used-model" class="model-history"></span></div><span class="live-dot" aria-hidden="true"></span></div>
+        </section>
+        <section class="panel final-panel" aria-labelledby="final-title">
+          <div class="panel-heading"><div><span class="section-number">03</span><h2 id="final-title">최종 노트</h2></div><label class="model-picker"><span class="sr-only">최종 요약 모델</span><select id="final-model" disabled></select></label></div>
+          <div id="final-summary" class="summary-text placeholder">강의가 끝나면 전체 내용을 한국어로 정리합니다.
+영어 전문 용어는 원문 표기를 유지합니다.</div>
+          <div class="panel-footer"><div><span id="final-status" role="status">녹음 종료 후 생성</span><span id="final-used-model" class="model-history"></span></div><button id="retry" class="text-button" hidden>최종 요약 다시 시도</button></div>
+        </section>
+      </div>
+    </div>
+    </div>
+    <footer class="page-footer"><span>음성과 과목 설정은 Soniox로, 요약 자료는 OpenAI로 전송됩니다.</span><span>과목 폴더·강의 노트·과목 종합 노트는 SQLite에 저장됩니다.</span></footer>
+  </main>
+  </div>
+</body>
+</html>
