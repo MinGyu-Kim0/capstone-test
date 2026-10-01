@@ -28,7 +28,7 @@ class ModelSelectionTests(unittest.TestCase):
 
     def test_all_four_live_final_combinations_reach_provider_and_sqlite(self):
         for live, final in itertools.product(main.SUMMARY_MODELS, repeat=2):
-            retry_live = (live, final) == ("gpt-6-sol", "gpt-6-luna")
+            retry_live = (live, final) == ("gpt-6.1-sol", "gpt-6-luna")
             model = Summarizer(fail_live_once=retry_live)
             with self.subTest(live=live, final=final), patch.dict("os.environ", {"SONIOX_API_KEY": "fake", "OPENAI_API_KEY": "fake"}), patch.object(main, "connect", return_value=Speech()), patch.object(main, "AsyncOpenAI", return_value=model), patch.object(main, "LIVE_RETRY_DELAY", .01):
                 with TestClient(main.app, base_url="http://localhost") as client:
@@ -52,13 +52,15 @@ class ModelSelectionTests(unittest.TestCase):
                     self.assertEqual((saved["live_model"], saved["final_model"]), (live, final))
                     self.assertTrue(saved["chunks"] and saved["final"])
                     self.assertEqual([call["model"] for call in model.calls], [live] * (2 if retry_live else 1) + [final])
+                    self.assertEqual([call["reasoning"]["effort"] for call in model.calls],
+                                     ["low" if live == "gpt-6.1-sol" else "none"] * (2 if retry_live else 1) + ["low"])
         self.assertEqual(len(self.store.list()), 4)
 
     def test_existing_model_settings_select_supported_successors(self):
-        self.assertEqual(main.SUMMARY_MODELS, ("gpt-6-sol", "gpt-6-luna"))
-        for old, new in {"gpt-5.6-sol": "gpt-6-sol", "gpt-5.6-terra": "gpt-6-sol", "gpt-5.6-luna": "gpt-6-luna"}.items():
+        self.assertEqual(main.SUMMARY_MODELS, ("gpt-6.1-sol", "gpt-6-luna"))
+        for old, new in {"gpt-6-sol": "gpt-6.1-sol", "gpt-5.6-sol": "gpt-6.1-sol", "gpt-5.6-terra": "gpt-6.1-sol", "gpt-5.6-luna": "gpt-6-luna"}.items():
             self.assertEqual(main.configured_summary_model(old, "gpt-6-luna"), new)
-            self.assertEqual(main.configured_summary_model(new, "gpt-6-sol"), new)
+            self.assertEqual(main.configured_summary_model(new, "gpt-6.1-sol"), new)
         for invalid in (None, "", "unapproved-model"):
             for default in main.SUMMARY_MODELS:
                 self.assertEqual(main.configured_summary_model(invalid, default), default)
@@ -67,7 +69,7 @@ class ModelSelectionTests(unittest.TestCase):
         with patch.dict("os.environ", {"SONIOX_API_KEY": "fake", "OPENAI_API_KEY": "fake"}), patch.object(main, "connect") as connect, patch.object(main, "AsyncOpenAI") as model:
             with TestClient(main.app, base_url="http://localhost") as client:
                 self.assertEqual(client.get("/api/config").json()["summary_models"], list(main.SUMMARY_MODELS))
-                for invalid in ("unapproved-model", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-6-terra"):
+                for invalid in ("unapproved-model", "gpt-6-sol", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-6-terra"):
                     for field in ("live_model", "final_model"):
                         with client.websocket_connect("ws://localhost/ws/session") as ws:
                             ws.send_json({"type": "start", "sample_rate": 16000, field: invalid})
@@ -82,7 +84,7 @@ class ModelSelectionTests(unittest.TestCase):
     def test_regeneration_replaces_model_atomically_and_survives_late_checkpoint(self):
         record = {"id": "00000000-0000-4000-8000-000000000001", "createdAt": "2026-09-23T00:00:00Z",
                   "course": {"name": "물리", "context": "", "terms": []}, "transcript": "확정 원문",
-                  "chunks": [{"id": 1, "text": "실시간 요약", "status": "done", "source_text": "확정 원문"}], "final": "이전 노트", "duration": 1, "live_model": "gpt-5.6-luna", "final_model": "gpt-5.6-terra"}
+                  "chunks": [{"id": 1, "text": "실시간 요약", "status": "done", "source_text": "확정 원문"}], "final": "이전 노트", "duration": 1, "live_model": "gpt-6-sol", "final_model": "gpt-5.6-terra"}
         legacy_chunks = [{"id": 1, "text": "실시간 요약", "status": "done"}]
         self.store.save(record)
         for selected in main.SUMMARY_MODELS:
@@ -98,11 +100,11 @@ class ModelSelectionTests(unittest.TestCase):
             saved = self.store.get(record["id"])
             self.assertEqual(saved["final"], "- 화요일 회의")
             self.assertEqual(saved["final_model"], selected)
-            self.assertEqual(saved["live_model"], "gpt-5.6-luna")
+            self.assertEqual(saved["live_model"], "gpt-6-sol")
             self.assertEqual(saved["chunks"][0]["source_text"], "확정 원문", "old clients and late checkpoints cannot erase chunk sources")
         with patch.dict("os.environ", {"OPENAI_API_KEY": "fake"}), patch.object(main, "AsyncOpenAI", return_value=Summarizer(fail_final=True)):
             with TestClient(main.app, base_url="http://localhost") as client:
-                response = client.post("/api/summary/final", json={"note_id": record["id"], "transcript": record["transcript"], "model": "gpt-6-sol"})
+                response = client.post("/api/summary/final", json={"note_id": record["id"], "transcript": record["transcript"], "model": "gpt-6.1-sol"})
                 self.assertEqual(response.status_code, 502)
                 self.assertEqual(self.store.get(record["id"])["final_model"], "gpt-6-luna")
 

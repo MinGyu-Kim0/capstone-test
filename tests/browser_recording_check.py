@@ -93,8 +93,8 @@ async def run():
                 page.on('pageerror', lambda error: errors.append(str(error)))
                 for index, (block_live, delay) in enumerate([(False, .03), (True, .1), (True, 1), (False, .03)]):
                     live_model, final_model = [
-                        ('gpt-6-sol', 'gpt-6-sol'), ('gpt-6-luna', 'gpt-6-luna'),
-                        ('gpt-6-luna', 'gpt-6-sol'), ('gpt-6-sol', 'gpt-6-luna'),
+                        ('gpt-6.1-sol', 'gpt-6.1-sol'), ('gpt-6-luna', 'gpt-6-luna'),
+                        ('gpt-6-luna', 'gpt-6.1-sol'), ('gpt-6.1-sol', 'gpt-6-luna'),
                     ][index]
                     model.block_live, model.delay = block_live, delay
                     model.fail_final = index == 3
@@ -102,7 +102,7 @@ async def run():
                     await page.goto(f'http://127.0.0.1:{port}')
                     await page.locator('#new-note:enabled').click()
                     for selector in ('#live-model', '#final-model', '#subject-model'):
-                        assert await page.locator(selector + ' option').evaluate_all('(options) => options.map(option => option.value)') == ['gpt-6-sol', 'gpt-6-luna']
+                        assert await page.locator(selector + ' option').evaluate_all('(options) => options.map(option => option.value)') == ['gpt-6.1-sol', 'gpt-6-luna']
                     await page.locator('#course-name').fill(f'테스트 강의 {index + 1}')
                     await page.locator('#live-model').select_option(live_model)
                     await page.locator('#final-model').select_option(final_model)
@@ -133,10 +133,10 @@ async def run():
                         await page.reload()
                         await page.locator('#retry:visible').wait_for()
                         model.fail_final = False
-                        await page.locator('#final-model').select_option('gpt-6-sol')
+                        await page.locator('#final-model').select_option('gpt-6.1-sol')
                         await page.locator('#retry').click()
                         await page.wait_for_function("document.body.dataset.state === 'done'")
-                        assert model.calls[-1]['model'] == 'gpt-6-sol'
+                        assert model.calls[-1]['model'] == 'gpt-6.1-sol'
                     if index == 0:
                         await page.locator('#final-model').select_option('gpt-6-luna')
                         assert final_model in await page.locator('#final-used-model').text_content()
@@ -201,14 +201,14 @@ async def run():
                 await page.wait_for_function("document.body.dataset.state === 'done'")
                 await folder.click()
                 await page.wait_for_function("document.body.dataset.state === 'subject'")
-                await page.locator('#subject-model').select_option('gpt-6-sol')
+                await page.locator('#subject-model').select_option('gpt-6.1-sol')
                 await page.locator('#subject-generate').click()
                 await page.wait_for_function("document.body.dataset.state === 'subject' && !document.querySelector('#subject-summary').classList.contains('placeholder')")
                 aggregate = await page.locator('#subject-summary').text_content()
                 payload = json.loads(model.calls[-1]['input'])
                 assert set(note['id'] for note in payload['lecture_notes']) == {first_id, moved_id}
                 assert 'transcript' not in payload
-                assert model.calls[-1]['model'] == 'gpt-6-sol'
+                assert model.calls[-1]['model'] == 'gpt-6.1-sol'
                 model.fail_final = True
                 await page.locator('#subject-generate').click()
                 await page.wait_for_function("document.body.dataset.state === 'subject' && !document.querySelector('#notice').hidden")

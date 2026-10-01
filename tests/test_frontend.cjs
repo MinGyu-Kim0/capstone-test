@@ -26,8 +26,8 @@ async function main() {
   let storageFailure = false;
   let microphoneRequests = 0;
   const config = { soniox_configured: true, openai_configured: true, summary_trigger: "endpoint", previous_chunks: 2, max_session_seconds: 7200,
-    summary_models: ["gpt-6-sol", "gpt-6-luna"], realtime_model: "gpt-6-luna", final_model: "gpt-6-sol",
-    model_migrations: { "gpt-5.6-sol": "gpt-6-sol", "gpt-5.6-terra": "gpt-6-sol", "gpt-5.6-luna": "gpt-6-luna" } };
+    summary_models: ["gpt-6.1-sol", "gpt-6-luna"], realtime_model: "gpt-6-luna", final_model: "gpt-6.1-sol",
+    model_migrations: { "gpt-6-sol": "gpt-6.1-sol", "gpt-5.6-sol": "gpt-6.1-sol", "gpt-5.6-terra": "gpt-6.1-sol", "gpt-5.6-luna": "gpt-6-luna" } };
   const mediaNode = () => ({ connect() {}, disconnect() {} });
   class TestAudioContext {
     constructor() { this.sampleRate = 16000; this.state = "running"; this.audioWorklet = { async addModule() {} }; }
@@ -84,7 +84,7 @@ async function main() {
       return { ok: true, json: async () => ({ text: "강의 개요\n- acceleration은 속도의 변화율입니다.", model: retryBody.model, note: records.get(retryBody.note_id) }) };
     },
     testSession: {
-      models: { live_model: "gpt-6-sol", final_model: "gpt-6-luna" },
+      models: { live_model: "gpt-6.1-sol", final_model: "gpt-6-luna" },
       course: { name: "일반물리학", context: "뉴턴의 운동 법칙", terms: ["momentum", "각운동량"] },
       source: { connect() {}, disconnect() {} }, node: { connect() {}, disconnect() {} },
       gain: { connect() {}, disconnect() {} }, context: { destination: {}, state: "closed" },
@@ -98,17 +98,17 @@ async function main() {
   assert.deepEqual(nodes.get("final-model").children.map((option) => option.value), config.summary_models);
   assert.deepEqual(nodes.get("subject-model").children.map((option) => option.value), config.summary_models);
   assert.equal(nodes.get("live-model").value, "gpt-6-luna");
-  assert.equal(nodes.get("final-model").value, "gpt-6-sol");
+  assert.equal(nodes.get("final-model").value, "gpt-6.1-sol");
   for (const [saved, selected] of [...Object.entries(config.model_migrations), ["gpt-6-luna", "gpt-6-luna"], ["unsupported", null]]) {
     stored.set("voice-notes.models.v1", JSON.stringify({ live_model: saved, final_model: saved }));
     await vm.runInContext("modelPreferences = null; loadConfig()", context);
     assert.equal(nodes.get("live-model").value, selected || config.realtime_model);
     assert.equal(nodes.get("final-model").value, selected || config.final_model);
   }
-  nodes.get("live-model").value = "gpt-6-sol";
+  nodes.get("live-model").value = "gpt-6.1-sol";
   nodes.get("final-model").value = "gpt-6-luna";
   vm.runInContext("changeModels()", context);
-  assert.deepEqual(JSON.parse(stored.get("voice-notes.models.v1")), { live_model: "gpt-6-sol", final_model: "gpt-6-luna" });
+  assert.deepEqual(JSON.parse(stored.get("voice-notes.models.v1")), { live_model: "gpt-6.1-sol", final_model: "gpt-6-luna" });
   nodes.get("course-name").value = " 일반물리학 ";
   nodes.get("course-context").value = " 뉴턴의 운동 법칙 ";
   nodes.get("course-terms").value = " momentum \n각운동량\nmomentum\n";
@@ -127,7 +127,7 @@ async function main() {
   await vm.runInContext("startRecording()", context);
   assert.equal(nodes.get("course-settings").disabled, true);
   vm.runInContext("current.socket.onopen()", context);
-  assert.deepEqual(JSON.parse(vm.runInContext("JSON.stringify(current.socket.sent[0])", context)), { type: "start", sample_rate: 16000, course: expectedCourse, live_model: "gpt-6-sol", final_model: "gpt-6-luna" });
+  assert.deepEqual(JSON.parse(vm.runInContext("JSON.stringify(current.socket.sent[0])", context)), { type: "start", sample_rate: 16000, course: expectedCourse, live_model: "gpt-6.1-sol", final_model: "gpt-6-luna" });
   assert.equal(nodes.get("live-model").disabled, true);
   assert.equal(nodes.get("final-model").disabled, true);
   const snapshot = stored.get("voice-notes.courses.v1");
@@ -211,13 +211,13 @@ async function main() {
   assert.ok(!markdown.includes("청크 3") && !markdown.includes("미완성 구간"));
   assert.ok(!markdown.includes("미확정 내용") && !markdown.includes("미완성 노트"));
   assert.equal(nodes.get("retry").hidden, true);
-  nodes.get("final-model").value = "gpt-6-sol";
+  nodes.get("final-model").value = "gpt-6.1-sol";
   vm.runInContext("changeModels()", context);
   assert.equal(nodes.get("retry").hidden, false, "a completed note can be regenerated with a different model");
   assert.ok(nodes.get("final-used-model").textContent.includes("gpt-6-luna"), "selection does not relabel the existing result");
   await vm.runInContext("retrySummary()", context);
-  assert.equal(retryBody.model, "gpt-6-sol");
-  assert.ok(nodes.get("final-used-model").textContent.includes("gpt-6-sol"));
+  assert.equal(retryBody.model, "gpt-6.1-sol");
+  assert.ok(nodes.get("final-used-model").textContent.includes("gpt-6.1-sol"));
   assert.equal(nodes.get("retry").hidden, true);
   const secondId = "00000000-0000-4000-8000-000000000002";
   records.set(secondId, { id: secondId, createdAt: "2026-09-23T02:00:00Z", course: { name: "화학", context: "산과 염기", terms: ["pH"] }, transcript: "산성 pH", final: "화학 최종 노트", chunks: [{ id: 1, text: "화학 실시간 요약", status: "done" }], duration: 60 });
@@ -258,18 +258,18 @@ async function main() {
   assert.equal(nodes.get("confirmed").textContent, "");
   assert.equal(vm.runInContext("liveNotes.size", context), 0);
   assert.equal(nodes.get("note-count").textContent, "2", "new note preserves library");
-  assert.equal(nodes.get("final-model").value, "gpt-6-sol", "new recordings use remembered preferences");
+  assert.equal(nodes.get("final-model").value, "gpt-6.1-sol", "new recordings use remembered preferences");
   records.get(secondId).live_model = "gpt-5.6-sol";
   records.get(secondId).final_model = "gpt-5.6-terra";
   await vm.runInContext("selectNote(secondId)", context);
-  assert.equal(nodes.get("live-model").value, "gpt-6-sol");
-  assert.equal(nodes.get("final-model").value, "gpt-6-sol");
+  assert.equal(nodes.get("live-model").value, "gpt-6.1-sol");
+  assert.equal(nodes.get("final-model").value, "gpt-6.1-sol");
   assert.ok(nodes.get("live-used-model").textContent.includes("gpt-5.6-sol"));
   assert.ok(nodes.get("final-used-model").textContent.includes("gpt-5.6-terra"));
   await vm.runInContext("retrySummary()", context);
-  assert.equal(retryBody.model, "gpt-6-sol");
+  assert.equal(retryBody.model, "gpt-6.1-sol");
   assert.equal(retryBody.live_model, "gpt-5.6-sol", "regeneration sends historical live metadata without relabeling it");
-  assert.ok(nodes.get("final-used-model").textContent.includes("gpt-6-sol"));
+  assert.ok(nodes.get("final-used-model").textContent.includes("gpt-6.1-sol"));
   assert.ok(nodes.get("live-used-model").textContent.includes("gpt-5.6-sol"));
   const source = { note_id: secondId, title: "화학", created_at: "2026-09-23T02:00:00Z", quote: "화학 최종 노트", final_hash: "a".repeat(64) };
   const sourceNote = { id: secondId, title: "화학", createdAt: source.created_at, has_final: true, chunk_count: 1, subject_id: "subject", final_hash: source.final_hash };

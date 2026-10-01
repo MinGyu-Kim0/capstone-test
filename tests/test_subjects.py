@@ -37,7 +37,7 @@ class SubjectTests(unittest.TestCase):
         self.store.save(record)
         return self.store.get(record["id"])
 
-    def aggregate(self, subject_id, model="gpt-6-sol"):
+    def aggregate(self, subject_id, model="gpt-6.1-sol"):
         return self.client.post(f"/api/subjects/{subject_id}/summary", json={"model": model})
 
     def test_folders_and_single_aggregate_preserve_lectures_and_only_use_final_summaries(self):
@@ -54,7 +54,7 @@ class SubjectTests(unittest.TestCase):
         self.assertEqual([note["summary"] for note in payload["lecture_notes"]], ["FIRST FINAL", "SECOND FINAL"])
         self.assertNotIn("PRIVATE", self.model.calls[-1]["input"])
         self.assertNotIn("OTHER SUBJECT", self.model.calls[-1]["input"])
-        self.assertEqual(subject["summary_model"], "gpt-6-sol")
+        self.assertEqual(subject["summary_model"], "gpt-6.1-sol")
         self.assertEqual(subject["revision"], subject["summary_revision"])
         self.assertEqual(len(subject["notes"]), 3)
         self.assertEqual(self.store.get(first["id"]), first)

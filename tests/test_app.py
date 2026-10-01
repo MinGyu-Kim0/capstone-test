@@ -169,7 +169,7 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(done["final_ok"])
         self.assertEqual(session.transcript, "회의는 화요일입니다.\n담당자는 민수입니다.")
         self.assertEqual(speech.frames[-1], "")
-        self.assertEqual([c["model"] for c in model.calls], ["gpt-6-luna", "gpt-6-sol"])
+        self.assertEqual([c["model"] for c in model.calls], ["gpt-6-luna", "gpt-6.1-sol"])
         self.assertEqual(json.loads(model.calls[-1]["input"])["transcript"], session.transcript)
         self.assertTrue(all(c["store"] is False for c in model.calls))
         self.assertTrue(all(s.closed for s in model.streams))
@@ -475,7 +475,7 @@ class RouteTests(unittest.TestCase):
             self.assertIn("핵심 개념·정의", final_call["instructions"])
             response = client.post("/api/summary/final", json={"transcript": final_input})
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.json()["model"], "gpt-6-sol")
+            self.assertEqual(response.json()["model"], "gpt-6.1-sol")
             self.assertEqual(json.loads(model.calls[-1]["input"])["transcript"], final_input)
 
     def test_static_config_and_missing_keys(self):

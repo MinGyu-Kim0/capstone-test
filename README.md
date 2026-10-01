@@ -6,7 +6,7 @@ FastAPI 하나로 실행하는 **한국어·영어 혼합 강의 전사·학습 
 - 과목별 설정: 강의 배경(context)과 전문 용어(terms)를 UI에서 입력하고 브라우저에 저장
 - 실시간 노트: 확정 원문의 `<end>`마다 청크를 만들어 선택한 OpenAI 모델에 전송(기본 `gpt-6-luna`), 직전 두 청크를 문맥으로 제공
 - 실시간 요약 노트: 각 청크의 **핵심 주제 제목**과 **새 내용 / 반복된 내용 / 보완·정정**을 스트리밍 표시하고, **이 요약의 전사 원문**을 펼쳐 해당 청크의 발화를 확인
-- 최종 노트: 종료 후 전체 확정 원문을 선택한 모델로 요약(기본 `gpt-6-sol`)
+- 최종 노트: 종료 후 전체 확정 원문을 선택한 모델로 요약(기본 `gpt-6.1-sol`)
 - 왼쪽 **과목 · 노트**: 과목 폴더 아래에 녹음별 전사 원문·실시간 요약·최종 노트를 SQLite에 저장
 - 과목 종합 노트: 해당 과목의 강의 최종 요약들을 통합해 과목마다 하나의 노트로 관리
 - 강의 노트 이동·삭제, 과목 종합 노트 삭제, 빈 과목 폴더 삭제
@@ -32,7 +32,7 @@ Copy-Item .env.example .env
 SONIOX_API_KEY=본인의_Soniox_API_키
 OPENAI_API_KEY=본인의_OpenAI_API_키
 OPENAI_REALTIME_MODEL=gpt-6-luna
-OPENAI_FINAL_MODEL=gpt-6-sol
+OPENAI_FINAL_MODEL=gpt-6.1-sol
 ```
 
 ```powershell
@@ -159,10 +159,10 @@ ngrok http 8080 --url https://example.ngrok-free.dev
 
 ## 요약 모델 선택
 
-- **실시간 요약 노트**, **최종 노트**, **과목 종합 노트**의 선택 상자에서 각각 `gpt-6-sol`, `gpt-6-luna`를 고를 수 있습니다. 각 용도에 같은 모델을 선택해도 됩니다.
+- **실시간 요약 노트**, **최종 노트**, **과목 종합 노트**의 선택 상자에서 각각 `gpt-6.1-sol`, `gpt-6-luna`를 고를 수 있습니다. 각 용도에 같은 모델을 선택해도 됩니다.
 - 녹음 시작 시 두 선택을 고정합니다. 연결·녹음·요약·노트 불러오기 중에는 선택 상자를 잠그며, 실시간 재시도도 해당 녹음의 모델을 사용합니다.
-- 마지막 선택은 브라우저에 저장해 다음 녹음에도 적용합니다. 최초 기본값은 `.env`의 `OPENAI_REALTIME_MODEL` / `OPENAI_FINAL_MODEL`입니다. 지원하지 않는 값이면 각각 GPT-6 Luna / GPT-6 Sol로 돌아갑니다. 과목 종합 노트의 기본값도 최종 노트와 같습니다.
-- 이전 `.env`·브라우저 선택은 GPT-5.6 Sol → GPT-6 Sol, GPT-5.6 Luna → GPT-6 Luna, GPT-5.6 Terra → GPT-6 Sol로 연결합니다. 기존 노트와 변경 이력의 실제 생성 모델 표시는 그대로 보존합니다.
+- 마지막 선택은 브라우저에 저장해 다음 녹음에도 적용합니다. 최초 기본값은 `.env`의 `OPENAI_REALTIME_MODEL` / `OPENAI_FINAL_MODEL`입니다. 지원하지 않는 값이면 각각 GPT-6 Luna / GPT-6.1 Sol로 돌아갑니다. 과목 종합 노트의 기본값도 최종 노트와 같습니다.
+- 이전 `.env`·브라우저 선택은 GPT-6 Sol → GPT-6.1 Sol, GPT-5.6 Sol → GPT-6.1 Sol, GPT-5.6 Luna → GPT-6 Luna, GPT-5.6 Terra → GPT-6.1 Sol로 연결합니다. 기존 노트와 변경 이력의 실제 생성 모델 표시는 그대로 보존합니다.
 - 최종 노트가 이미 완성되어 있어도 다른 모델을 선택하면 **선택한 모델로 다시 작성** 버튼이 나타납니다. 클릭할 때 추가 요약 요청을 보내며, 성공하면 같은 노트의 최종 내용과 생성 모델을 갱신합니다. 실패하면 기존 완료 결과를 유지합니다.
 - **생성 모델** 표시는 화면에 보이는 결과를 실제로 만든 모델입니다. 선택 상자만 바꿔도 기존 결과의 모델 표시가 바뀌지는 않습니다. 실시간 모델 변경은 다음 녹음에 적용되며, 기존 청크를 다시 요약하지 않습니다.
 - 녹음별 모델 정보는 SQLite에 보관합니다. 기존 DB는 첫 접근 시 열을 추가하며 원문·요약을 보존합니다. 모델 정보가 없는 이전 기록은 생성 모델을 추정하지 않고 **모델 정보 없음**으로 표시합니다.
@@ -246,6 +246,6 @@ python tests/browser_recording_check.py
 - [Soniox 발화 종료 감지](https://soniox.com/docs/stt/rt/endpoint-detection)
 - [Soniox 언어 설정](https://soniox.com/docs/stt/concepts/language-restrictions)
 - [OpenAI 공식 문서: GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna)
-- [OpenAI 공식 문서: GPT-6 Sol](https://developers.openai.com/api/docs/models/gpt-6-sol)
+- [OpenAI 공식 문서: GPT-6.1 Sol](https://developers.openai.com/api/docs/models/gpt-6.1-sol)
 - [OpenAI Responses 스트리밍](https://developers.openai.com/api/docs/guides/streaming-responses)
 - [OpenAI 구조화 출력](https://developers.openai.com/api/docs/guides/structured-outputs)

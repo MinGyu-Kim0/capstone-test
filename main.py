@@ -31,13 +31,14 @@ ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / ".env")
 SONIOX_URL = "wss://stt-rt.soniox.com/transcribe-websocket"
 SONIOX_MODEL = os.getenv("SONIOX_MODEL", "stt-rt-v5")
-SummaryModel = Literal["gpt-6-sol", "gpt-6-luna"]
-SUMMARY_MODELS = ("gpt-6-sol", "gpt-6-luna")
+SummaryModel = Literal["gpt-6.1-sol", "gpt-6-luna"]
+SUMMARY_MODELS = ("gpt-6.1-sol", "gpt-6-luna")
 # Old choices select a successor; historical result metadata keeps its original model.
-RecordedSummaryModel = SummaryModel | Literal["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]
+RecordedSummaryModel = SummaryModel | Literal["gpt-6-sol", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]
 MODEL_MIGRATIONS = {
-    "gpt-5.6-sol": "gpt-6-sol",
-    "gpt-5.6-terra": "gpt-6-sol",
+    "gpt-6-sol": "gpt-6.1-sol",
+    "gpt-5.6-sol": "gpt-6.1-sol",
+    "gpt-5.6-terra": "gpt-6.1-sol",
     "gpt-5.6-luna": "gpt-6-luna",
 }
 
@@ -48,7 +49,7 @@ def configured_summary_model(value: str | None, default: SummaryModel) -> str:
 
 
 LIVE_MODEL = configured_summary_model(os.getenv("OPENAI_REALTIME_MODEL"), "gpt-6-luna")
-FINAL_MODEL = configured_summary_model(os.getenv("OPENAI_FINAL_MODEL"), "gpt-6-sol")
+FINAL_MODEL = configured_summary_model(os.getenv("OPENAI_FINAL_MODEL"), "gpt-6.1-sol")
 LIVE_RETRY_DELAY = 2
 PREVIOUS_CHUNKS = 2
 MAX_CONTEXT_BYTES = 8000
@@ -228,7 +229,7 @@ async def summarize(client, transcript: str, *, final: bool, model=None, previou
             model=model,
             instructions=instructions,
             input=json.dumps(payload, ensure_ascii=False),
-            reasoning={"effort": "low" if final else "none"},
+            reasoning={"effort": "low" if final or model == "gpt-6.1-sol" else "none"},
             max_output_tokens=16000 if layout is not None else 6000 if final else 1800,
             store=False,
             stream=True,
@@ -753,7 +754,7 @@ async def websocket_session(ws: WebSocket):
         try:
             start = StartMessage.model_validate(await asyncio.wait_for(ws.receive_json(), timeout=10))
         except (ValidationError, ValueError, TypeError, TimeoutError):
-            raise SessionError("시작 설정을 확인해 주세요. 모델은 gpt-6-sol/luna 중 선택하고, 과목명 80자, 설명 2,000자, 용어 100개(각 80자), context 합계 UTF-8 8,000바이트 이하와 유효한 샘플 레이트가 필요합니다.") from None
+            raise SessionError("시작 설정을 확인해 주세요. 모델은 gpt-6.1-sol/gpt-6-luna 중 선택하고, 과목명 80자, 설명 2,000자, 용어 100개(각 80자), context 합계 UTF-8 8,000바이트 이하와 유효한 샘플 레이트가 필요합니다.") from None
         async with AsyncOpenAI(api_key=api_key("OPENAI_API_KEY"), timeout=60, max_retries=0) as client:
             async with connect(SONIOX_URL, open_timeout=15, close_timeout=3, max_size=2**20) as upstream:
                 provider_config = {
